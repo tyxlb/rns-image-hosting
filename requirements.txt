@@ -2,3 +2,4 @@ RNS
 LXMF
 rns_page_node
 pillow
+git+https://github.com/tyxlb/RFS.git

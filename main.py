@@ -1,6 +1,7 @@
 import RNS
 import LXMF
 import rns_page_node
+import RFS
 from PIL import Image
 from pathlib import Path
 from io import BytesIO
@@ -10,7 +11,7 @@ import time
 
 
 display_name = "rns-image-hosting"
-announce_interval = 20
+announce_interval = 60  # minutes
 configpath = "./config"
 pagespath = "./pages"
 filespath = "./files"
@@ -78,6 +79,7 @@ pagenode = rns_page_node.PageNode(
 )
 pagenode_addr = RNS.prettyhexrep(pagenode.destination.hash)
 RNS.log(f"Node address: {pagenode_addr}", RNS.LOG_INFO)
+
 message_router = LXMF.LXMRouter(identity=identity, storagepath=configpath)
 local_lxmf_destination = message_router.register_delivery_identity(
     identity=identity, display_name=display_name, stamp_cost=8
@@ -87,8 +89,24 @@ lxmf_addr = RNS.prettyhexrep(local_lxmf_destination.hash)
 RNS.log(f"LXMF address: {lxmf_addr}", RNS.LOG_INFO)
 
 
+def ask_local(digest: bytes):
+    return rfsnode.directory.joinpath(digest.hex() + ".webp").exists()
+
+
+def get_local(digest: bytes):
+    return rfsnode.directory.joinpath(digest.hex() + ".webp").read_bytes()
+
+
+rfsnode = RFS.Node(identity, directory=filespath)
+rfsnode.ask_local = ask_local
+rfsnode.get_local = get_local
+rfs_addr = RNS.prettyhexrep(rfsnode.destination.hash)
+RNS.log(f"RFS address: {rfs_addr}", RNS.LOG_INFO)
+
+
 def announce():
     local_lxmf_destination.announce()
+    rfsnode.announce()
     schedule_next_run()
 
 
